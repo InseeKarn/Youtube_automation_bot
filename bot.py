@@ -1,46 +1,33 @@
-import os
-import discord
-from discord.ext import commands
-from dotenv import load_dotenv
-from googleapiclient.discovery import build
+import asyncio
+import moviepy.config as mpc
+from cogs.text_to_speech import text_to_speech
+from cogs.video_creation import create_video_with_text_and_image
+from cogs.story_ideas import get_story_idea
+from moviepy.editor import TextClip
 
-# โหลดค่าในไฟล์ .env
-load_dotenv()
+# Set ImageMagick path
+mpc.change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.x.x-Q16-HDRI\magick.exe"})
 
-# ค่า Token และ API Key จาก .env
-DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
-# กำหนด intents และสร้าง instance ของ bot
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+async def main():
+    story_idea = await get_story_idea()
+    print("Generated Story Idea:", story_idea)
 
-# ฟังก์ชันสำหรับค้นหาวิดีโอจาก YouTube
-def search_youtube_video(query):
-    youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
-    request = youtube.search().list(
-        part='snippet',
-        maxResults=1,
-        q=query
-    )
-    response = request.execute()
-    if response['items']:
-        video = response['items'][0]
-        return f"https://www.youtube.com/watch?v={video['id']['videoId']}"
-    return "ไม่พบวิดีโอที่ค้นหา"
+    audio_filename = "story_idea.mp3"
+    video_filename = "story_idea_video_with_text_and_image.mp4"
+    image_file = "your_image.png"  # Replace with the path to your image
 
-# เมื่อบอทพร้อมทำงาน
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user}')
+    # Convert text to speech
+    text_to_speech(story_idea, audio_filename)
 
-# คำสั่งสำหรับการค้นหาวิดีโอใน YouTube
-@bot.command(name='search', help='ค้นหาวิดีโอบน YouTube')
-async def search(ctx, *, query):
-    video_url = search_youtube_video(query)
-    await ctx.send(f'เจอวิดีโอ: {video_url}')
+    # Create video with text and image overlay
+    create_video_with_text_and_image(audio_filename, video_filename, story_idea, image_file)
 
-# เริ่มการทำงานของบอท
-bot.run(DISCORD_TOKEN)
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# Create a text clip to test
+txt_clip = TextClip("Hello, World!", fontsize=70, color='white', size=(640, 480))
+txt_clip.save_frame("test_frame.png")  # This should create an image file
+
+print("TextClip created successfully!")
