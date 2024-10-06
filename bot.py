@@ -1,35 +1,33 @@
-import asyncio
-import moviepy.config as mpc
-from cogs.text_to_speech import text_to_speech
-from cogs.video_creation import create_video_with_text_and_image
-from cogs.story_ideas import get_story_idea
-from cogs.image_fetcher import get_free_image
+import discord
 import os
+import moviepy.config as mpc
 from dotenv import load_dotenv
+from discord.ext import commands
+from cogs.story_ideas import StoryIdeas
 
-load_dotenv()  # โหลดข้อมูลจากไฟล์ .env
+load_dotenv()
 
-# Set ImageMagick path
 mpc.change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
-async def main():
-    story_idea = await get_story_idea()
-    print("Generated Story Idea:", story_idea)
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-    # ดึงภาพจาก Unsplash
-    image_file = get_free_image(story_idea)  # ใช้ฟังก์ชันที่สร้างขึ้น
+@bot.event
+async def on_ready():
+  print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
+  await bot.add_cog(StoryIdeas(bot))
 
-    if image_file:
-        audio_filename = "story_idea.mp3"
-        video_filename = "story_idea_video_with_text_and_image.mp4"
+@bot.event
+async def on_message(message):
+  if message.author == bot.user:
+    return
+  
+  print(f'Message from {message.author}: {repr(message.content)}')
 
-        # Convert text to speech
-        text_to_speech(story_idea, audio_filename)
+  await bot.process_commands(message)
 
-        # Create video with text and image overlay
-        create_video_with_text_and_image(audio_filename, video_filename, story_idea, image_file)
-    else:
-        print("ไม่สามารถดึงภาพได้.")
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+  bot.run(os.getenv("DISCORD_TOKEN"))
